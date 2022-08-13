@@ -1,0 +1,11 @@
+name: YPLUGIN
+version: '${project.version}'
+main: com.yopiru.yplugin.YPLUGIN
+api-version: 1.16
+
+commands:
+  maintenance-mode:
+    description: "メンテナンスモードの設定を行います。"
+    usage: "/maintenance-mode {メンテナンスレベル}"
+    permission: YPLUGIN.command.op
+    permission-message: "あなたに実行する権限がないです。(You do not have permission to run,this is a pen)"
