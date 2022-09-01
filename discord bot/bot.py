@@ -3,11 +3,10 @@ from sqlalchemy import create_engine,Column,Integer,String
 from sqlalchemy.orm import scoped_session,sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import requests
-import discord
-import dislash
-from discord.ext import commands
-from discord import Client,Embed,webhook,WebhookMessage
-from dislash import InteractionClient,Button,ActionRow,ButtonStyle,OptionType,Option
+import disnake as discord
+from disnake import Option,OptionType,ApplicationCommandInteraction
+from disnake.ext import commands
+import time
 
 #テンプデータ用の辞書定義
 discordidtemp = {}
@@ -20,8 +19,8 @@ flag = {}
 #discord.py,dislash.pyの色々定義
 intents = discord.Intents.all()
 intents.guilds = True
-bot = commands.Bot(command_prefix="Kaiueo.",intents=intents)
-interclient = InteractionClient(bot)
+bot = commands.Bot(command_prefix="Kaiueo.",intents=intents,test_guilds = [943859907877306478])
+interclient = bot
 #↓使うかどうか怪しいww(webhook用の名前)
 HOOK_NAME = "かきくけこコミュニティ管理BOT"
 #sqlalchemy色々定義
@@ -63,28 +62,49 @@ async def on_ready():
 #スラッシュコマンドエラー
 @bot.event
 async def on_slash_command_error(inter, error):
-    if isinstance(error,dislash.slash_commands.errors.MissingPermissions):
-        embed1 = discord.Embed(title=('エラー'),description='権限不足です。',color=discord.Color.red())
-        await inter.reply(embed=embed1, ephemeral=True)
-    elif isinstance(error,dislash.slash_commands.errors.BotMissingPermissions):
+    if isinstance(error, commands.errors.MissingPermissions):
+        embed1 = discord.Embed(title=('エラー'),description=f'権限不足です。 \n 必要権限: {error}',color=discord.Color.red())
+        try:
+            await inter.send(embed=embed1, ephemeral=True)
+        except:
+            await inter.response.edit_message(embed=embed1)
+    elif isinstance(error,commands.errors.BotMissingPermissions):
         emd = discord.Embed(title=('エラー'),description='botに必要な権限がありません。',color=discord.Color.red())
-        await inter.reply(embed=emd, ephemeral=True)
-    elif isinstance(error,dislash.slash_commands.errors.BotMissingAnyRole):
+        try:
+            await inter.send(embed=emd, ephemeral=True)
+        except:
+            await inter.response.edit_message(embed=emd)
+    elif isinstance(error,commands.errors.BotMissingAnyRole):
         emd5 = discord.Embed(title='エラー',description='botに必要な権限がありません。')
-        await inter.reply(embed=emd5, ephemeral=True)
-    elif isinstance(error,dislash.slash_commands.errors.BadArgument):
+        try:
+            await inter.send(embed=emd5, ephemeral=True)
+        except:
+            await inter.response.edit_message(embed=emd5, ephemeral=True)
+    elif isinstance(error,commands.errors.BadArgument):
         emd2 = discord.Embed(title=('エラー'),description='引数がエラーをおこしています。',color=discord.Color.red())
-        await inter.reply(embed=emd2, ephemeral=True)
+        try:
+            await inter.send(embed=emd2, ephemeral=True)
+        except:
+            await inter.response.edit_message(embed=emd2, ephemeral=True)
+    elif isinstance(error,commands.errors.CommandOnCooldown):
+        timer = int(error.retry_after)
+        timetime = int(time.time())
+        times = timetime + timer
+        emd2 = discord.Embed(title=('このコマンドはクールダウン中です。'),description=f'<t:{times}:R>に使えます。',color=discord.Color.red())
+        return await inter.response.send_message(embed=emd2, ephemeral=True)
     else:
-        embed2 = discord.Embed(title=('エラー'), description='不明なエラーが発生しました。',color=discord.Color.red())
+        embed2 = discord.Embed(title=('エラー'), description='例外なエラーが発生しました。',color=discord.Color.red())
         embed2.add_field(name='エラーログ',value=error)
-        await inter.reply(embed=embed2, ephemeral=True)
+        try:
+            await inter.send(embed=embed2, ephemeral=True)
+        except:
+            await inter.response.edit_message(embed=embed2, ephemeral=True)
         raise error
 #データベースの内容削除
 @interclient.slash_command(
     name = "dbedit",
     description = 'データベースの操作します。(よぴるのみ実行可能)',
-    options = [Option('discordid',"discordid",OptionType.STRING),Option("mcid","mcid",OptionType.STRING),Option("be_mcid","be_mcid",OptionType.STRING),Option("editmcid","変更後のMCID書く",OptionType.STRING)],
+    options = [Option('discordid',"discordid",),Option("mcid","mcid"),Option("be_mcid","be_mcid"),Option("editmcid","変更後のMCID書く")],
     test_guilds="943859907877306478",
 )
 async def dbedit(inter,discordid=None,mcid=None,be_mcid=None,editmcid=None):
@@ -154,7 +174,7 @@ async def dbedit(inter,discordid=None,mcid=None,be_mcid=None,editmcid=None):
 @interclient.slash_command(
     name = "dbcheck_class_mcid_list",
     description = 'データベースの中身の確認します。(よぴるのみ実行可能)',
-    options = [Option('discordid',"discordid",OptionType.STRING)],
+    options = [Option('discordid',"discordid")],
     test_guilds="943859907877306478",
 )
 async def dbcheck_class_mcid_list(inter,discordid=None):
@@ -180,7 +200,7 @@ async def dbcheck_class_mcid_list(inter,discordid=None):
 @interclient.slash_command(
     name = "dbcheck_class_gban_system",
     description = 'データベースの中身の確認します。(よぴるのみ実行可能)',
-    options = [Option('userid',"userid",OptionType.STRING)],
+    options = [Option('userid',"userid")],
 )
 async def dbcheck_class_gban_system(inter,userid=None):
     if inter.author.id == 400604650233135115 or inter.author.id == 850621909942140938:
@@ -204,12 +224,12 @@ async def dbcheck_class_gban_system(inter,userid=None):
 @interclient.slash_command(
     name = "java_mcid_add",
     description = 'JAVA版のユーザーのMCIDをサーバーに参加できるように登録します。',
-    options = [Option('mcid',"MCIDを書いてください。",OptionType.STRING,required=True)],
+    options = [Option('mcid',"MCIDを書いてください。",required=True)],
     test_guilds="943859907877306478",
 )
-async def java_mcid_add(inter,mcid=None):
+async def java_mcid_add(inter:ApplicationCommandInteraction,mcid=None):
+    await inter.response.defer()
     flag[inter.author.id] = False
-    await inter.reply("データベース読み込み中 <a:road:969468636068732968>")
     dates = session.query(mcid_date).all()
     userid = (int(inter.author.id))
     flag1 = False
@@ -219,112 +239,111 @@ async def java_mcid_add(inter,mcid=None):
                 flag1 = True
                 break
             else:
-                row = ActionRow(Button(style=ButtonStyle.green,label="はい",custom_id="yes"),Button(style=ButtonStyle.red,label="いいえ",custom_id="no"))
-                emd5 = discord.Embed(title="あなたは既に登録されています、変更しますか?",description="現在のあなたの登録情報" + "\n" + f"MCID: {date.mcid}" + "\n" + f"UUID: {date.uuid}",color=discord.Color.red())
-                msg = await inter.edit(content="",embed=emd5,components=[row])
-                on_click = msg.create_click_listener(timeout=20)
-                mcidtemp[inter.author.id] = mcid
-                @on_click.not_from_user(inter.author,cancel_others=True, reset_timeout=False)
-                async def on_wrong_user(inter):
-                    await inter.reply("あなたが実行した、コマンドではありません。", ephemeral=True)
-                @on_click.matching_id("yes")
-                async def on_yes(inter):
-                    await msg.edit(content="変更処理を開始しました <a:road:969468636068732968>",embed=None,components=[])
-                    mcid = mcidtemp[inter.author.id]
-                    mcidlists = open('mcidlist.json','r')
-                    mcidlist = json.load(mcidlists)
-                    check = json.dumps(mcidlist)
-                    userid = (int(inter.author.id))
-                    for kakunin in check:
-                        if kakunin == mcid:
-                            await msg.edit(content="既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?" ,embed=None)
-                            return
-                    else:
-                        emd2 = discord.Embed(title="mojangのAPIに接続中 <a:road:969468636068732968>",color=discord.Color.blue())
-                        await msg.edit(content="",embed=emd2)
-                        url = (f"https://api.mojang.com/users/profiles/minecraft/{mcid}")
-                        response = requests.get(url)
-                        try:
-                            uuid = response.json()["id"]
-                        except:
-                            emd3 = discord.Embed(title="存在しないMCIDもしくは、mojangのAPIにアクセスできません。",color=discord.Color.red())
-                            await msg.edit(content="",embed=emd3)
+                class seve_button(discord.ui.Button):
+                    def __init__(self,mcid=None):
+                        super().__init__()
+                        self.value = None
+                        self.label = "上書き保存"
+                        self.style = discord.ButtonStyle.green
+                        self.mcid = mcid
+                    async def callback(self,ctx:ApplicationCommandInteraction):
+                        flag1 = True
+                        b.disabled = True
+                        b2.disabled = True
+                        await inter.edit_original_message(view=v)
+                        await ctx.send("上書き保存中 <a:road:969468636068732968>")
+                        mcidlists = open('mcidlist.json','r')
+                        mcidlist = json.load(mcidlists)
+                        check = json.dumps(mcidlist)
+                        if self.mcid in check:
+                            await ctx.edit_original_message("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
                             return
                         else:
-                            mcid = response.json()["name"]
-                            emd4 = discord.Embed(title="既に登録済みです！！",description="大文字と小文字を変えて同じ人をもう一人登録しようとしないでください！！",color=discord.Color.red())
-                            if mcid in check:
-                                await msg.edit(content="",embed=emd4)
-                                return
-                            emd2 = discord.Embed(title="ファイル更新処理中 <a:road:969468636068732968>",color=discord.Color.blue())
-                            await msg.edit(content="",embed=emd2)
-                            userid = (int(inter.author.id))
+                            url = (f"https://api.mojang.com/users/profiles/minecraft/{self.mcid}")
+                            response = requests.get(url)
                             try:
-                                dates2 = session.query(mcid_date).all()
-                                for datekun in dates2:
-                                        if datekun.discordid == userid:
-                                            deletetemp = {"name":datekun.mcid, "uuid":datekun.uuid}
-                                            editmcid = session.query(mcid_date).filter(mcid_date.mcid == datekun.mcid).first()
-                                            editmcid.mcid = mcid
-                                            editmcid.uuid = uuid
-                                            session.commit()
-                                            break
-                                temp = {"name":mcid,"uuid":uuid}
+                                uuid = response.json()["id"]
+                            except:
+                                emd3 = discord.Embed(title="存在しないMCIDもしくは、mojangのAPIにアクセスできません。",color=discord.Color.red())
+                                await ctx.edit_original_message(content="",embed=emd3)
+                                return
+                            else:
+                                mcid = response.json()["name"]
+                                emd4 = discord.Embed(title="既に登録済みです！！",description="大文字と小文字を変えて同じ人をもう一人登録しようとしないでください！！",color=discord.Color.red())
+                                if mcid in check:
+                                    await ctx.edit_original_message(content="",embed=emd4)
+                                    return
+                                temp = {"name":self.mcid,"uuid":uuid}
                                 mcidlist.append(temp)
+                                deletetemp = {"name":date.mcid, "uuid":date.uuid}
                                 mcidlist.remove(deletetemp)
                                 with open('mcidlist.json','w') as f:
                                     json.dump(mcidlist,f,ensure_ascii=False, indent=4)
-                            except:
-                                emd = discord.Embed(title="エラーが発生しました。",description="データベースの保存時にエラーが発生しました。申し訳ございませんが、\n <@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
-                                await msg.edit(embed=emd)
-                                return
-                            emd = discord.Embed(title="ユーザー情報の上書き保存をしました。",description="登録情報" + "\n" + f"MCID: {mcid}" + "\n" + f"UUID: {uuid}",color=discord.Color.purple())
-                            await msg.edit(embed=emd)
-                            mcidlists.close
-                    mcidtemp.pop(inter.author.id)
-            @on_click.matching_id("no")
-            async def on_no(inter):
-                await msg.edit(content="変更せずに終了しました。",embed=None,components=[])
-                mcidtemp.pop(inter.author.id)
-                return
-            @on_click.timeout
-            async def on_timeout():
-                if inter.author.id in flag.keys():
-                    flag.pop(inter.author.id)
-                else:
-                    await msg.edit(content="変更せずに終了しました。",embed=None,components=[])
-                if inter.author.id in mcidtemp.keys():
-                    mcidtemp.pop(inter.author.id)
-                else:
-                    pass
-                return
-        else:
-            pass
+                                userid = (int(inter.author.id))
+                                add = mcid_date(discordid=userid,mcid=mcid,uuid=uuid)
+                                try:
+                                    if flag1 == True:
+                                        editmcid2 = session.query(mcid_date).filter(mcid_date.discordid == userid).first()
+                                        editmcid2.mcid = self.mcid
+                                        editmcid2.uuid = uuid
+                                        session.commit()
+                                    else:
+                                        session.add(add)
+                                        session.commit()
+                                except:
+                                    emd = discord.Embed(title="エラーが発生しました。",description="マイクラの参加リストにあなたは登録されましたが、データベースの保存時にエラーが発生しました。申し訳ございませんが、<@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
+                                    await ctx.edit_original_message(embed=emd)
+                                    return
+                                emd = discord.Embed(title="ユーザー登録が完了しました。",description="登録情報" + "\n" + f"MCID: {self.mcid}" + "\n" + f"UUID: {uuid}",color=discord.Color.purple())
+                                await ctx.edit_original_message(content=None,embed=emd)
+                        mcidlists.close
+                        return
+                class noseve_button(discord.ui.Button):
+                    def __init__(self):
+                        super().__init__()
+                        self.value = None
+                        self.label = "キャンセル"
+                        self.style = discord.ButtonStyle.green
+                    async def callback(self,ctx:ApplicationCommandInteraction):
+                        b.disabled = True
+                        b2.disabled = True
+                        await ctx.send("上書き保存を取り消しました。")
+                        await inter.edit_original_message(view=v)
+                        return
+                v = discord.ui.View()
+                b = seve_button(mcid=mcid)
+                b2 = noseve_button()
+                v.add_item(b)
+                v.add_item(b2)
+                emd = discord.Embed(title="あなたは既に登録されています。",description=f" 現在の登録情報 \n MCID: {date.mcid} \n 上書き保存しますか?",color=discord.Color.red())
+                await inter.send(embed=emd,view=v)
+                await v.wait()
+                if b.value is None:
+                    b.disabled = True
+                    b2.disabled = True
+                    await inter.edit_original_message(view=v)
+                    return
     mcidlists = open('mcidlist.json','r')
     mcidlist = json.load(mcidlists)
     check = json.dumps(mcidlist)
     if mcid in check:
-        await inter.edit("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
+        await inter.send("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
         return
     else:
-        emd2 = discord.Embed(title="mojangのAPIに接続中 <a:road:969468636068732968>",color=discord.Color.blue())
-        await inter.edit(content="",embed=emd2)
         url = (f"https://api.mojang.com/users/profiles/minecraft/{mcid}")
         response = requests.get(url)
         try:
             uuid = response.json()["id"]
         except:
             emd3 = discord.Embed(title="存在しないMCIDもしくは、mojangのAPIにアクセスできません。",color=discord.Color.red())
-            await inter.edit(content="",embed=emd3)
+            await inter.send(content="",embed=emd3)
             return
         else:
             mcid = response.json()["name"]
             emd4 = discord.Embed(title="既に登録済みです！！",description="大文字と小文字を変えて同じ人をもう一人登録しようとしないでください！！",color=discord.Color.red())
             if mcid in check:
-                await inter.edit(content="",embed=emd4)
+                await inter.send(content="",embed=emd4)
                 return
-            emd2 = discord.Embed(title="ファイルに保存処理中 <a:road:969468636068732968>",color=discord.Color.blue())
-            await inter.edit(content="",embed=emd2)
             temp = {"name":mcid,"uuid":uuid}
             mcidlist.append(temp)
             with open('mcidlist.json','w') as f:
@@ -342,20 +361,20 @@ async def java_mcid_add(inter,mcid=None):
                     session.commit()
             except:
                 emd = discord.Embed(title="エラーが発生しました。",description="マイクラの参加リストにあなたは登録されましたが、データベースの保存時にエラーが発生しました。申し訳ございませんが、<@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
-                await inter.edit(embed=emd)
+                await inter.send(embed=emd)
                 return
             emd = discord.Embed(title="ユーザー登録が完了しました。",description="登録情報" + "\n" + f"MCID: {mcid}" + "\n" + f"UUID: {uuid}",color=discord.Color.purple())
-            await inter.edit(embed=emd)
+            await inter.send(embed=emd)
     mcidlists.close
 #統合版のマイクラサーバー参加登録用コマンド
 @interclient.slash_command(
     name = "be_mcid_add",
     description = '統合版のユーザーのゲーマータグをサーバーに参加できるように登録します。',
-    options = [Option('gamertag',"ゲーマータグを書いてください。",OptionType.STRING,required=True)],
+    options = [Option('gamertag',"ゲーマータグを書いてください。",required=True)],
     test_guilds="943859907877306478",
 )
-async def be_mcid_add(inter,gamertag=None):
-    await inter.reply("データベース読み込み中 <a:road:969468636068732968>")
+async def be_mcid_add(inter:ApplicationCommandInteraction,gamertag=None):
+    await inter.response.defer()
     dates = session.query(mcid_date).all()
     userid = (int(inter.author.id))
     flag2 = False
@@ -365,81 +384,77 @@ async def be_mcid_add(inter,gamertag=None):
                 flag2 = True
                 break
             else:
-                mcidtemp2[inter.author.id] = date.be_mcid
-                row = ActionRow(Button(style=ButtonStyle.green,label="はい",custom_id="yes"),Button(style=ButtonStyle.red,label="いいえ",custom_id="no"))
-                emd5 = discord.Embed(title="あなたは既に登録されています、変更しますか?",description="現在のあなたの登録情報" + "\n" + f"ゲーマータグ: {date.be_mcid}",color=discord.Color.red())
-                msg = await inter.edit(content="",embed=emd5,components=[row])
-                on_click = msg.create_click_listener(timeout=20)
-                mcidtemp[inter.author.id] = gamertag
-                @on_click.not_from_user(inter.author,cancel_others=True, reset_timeout=False)
-                async def on_wrong_user(inter):
-                    await inter.reply("あなたが実行した、コマンドではありません。", ephemeral=True)
-                @on_click.matching_id("yes")
-                async def on_yes(inter):
-                    await msg.edit(content="変更処理を開始しました <a:road:969468636068732968>",embed=None,components=[])
-                    be_mcidlists = open('be_mcidlist.json','r')
-                    be_mcidlist = json.load(be_mcidlists)
-                    addgamertag = (str("." + gamertag))
-                    check = json.dumps(be_mcidlist)
-                    if gamertag in check:
-                        await msg.edit("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
+                class noseve_button(discord.ui.Button):
+                    def __init__(self):
+                        super().__init__()
+                        self.value = None
+                        self.label = "キャンセル"
+                        self.style = discord.ButtonStyle.green
+                    async def callback(self,ctx:ApplicationCommandInteraction):
+                        
+                        await ctx.send("上書き保存を取り消しました。")
                         return
-                    else:
-                        emd2 = discord.Embed(title="ファイルに保存処理中 <a:road:969468636068732968>",color=discord.Color.blue())
-                        await msg.edit(content="",embed=emd2)
-                        temp = {"name":addgamertag}
-                        temp2 = {"name":mcidtemp2[inter.author.id]}
-                        be_mcidlist.append(temp)
-                        be_mcidlist.remove(temp2)
-                        with open('be_mcidlist.json','w') as f:
-                            json.dump(be_mcidlist,f,ensure_ascii=False, indent=4)
-                        userid = (int(inter.author.id))
-                        try:
-                            editmcid3 = session.query(mcid_date).filter(mcid_date.discordid == userid).first()
-                            editmcid3.be_mcid = addgamertag
-                            session.commit()
-                        except:
-                            emd = discord.Embed(title="エラーが発生しました。",description="マイクラの参加リストにあなたは登録されましたが、データベースの保存時にエラーが発生しました。申し訳ございませんが、<@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
-                            await msg.edit(embed=emd)
+                class seve_button(discord.ui.Button):
+                    def __init__(self,gametag=None):
+                        super().__init__()
+                        self.value = None
+                        self.label = "上書き保存"
+                        self.style = discord.ButtonStyle.green
+                        self.gametag = gametag
+                    async def callback(self,ctx:ApplicationCommandInteraction):
+                        b.disabled = True
+                        b2.disabled = True
+                        await inter.edit_original_message(view=v)
+                        await ctx.send(content="上書き保存中 <a:road:969468636068732968>")
+                        be_mcidlists = open('be_mcidlist.json','r')
+                        be_mcidlist = json.load(be_mcidlists)
+                        addgamertag = (str("." + self.gametag))
+                        check = json.dumps(be_mcidlist)
+                        if gamertag in check:
+                            await ctx.edit_original_message("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
                             return
-                        session.close
-                        emd = discord.Embed(title="ユーザー情報を上書き保存しました。",description="登録情報" + "\n" + f"ゲーマータグ: {gamertag}",color=discord.Color.purple())
-                        await msg.edit(embed=emd)                
-                    mcidtemp.pop(inter.author.id)
+                        else:
+                            temp = {"name":addgamertag}
+                            temp2 = {"name":date.be_mcid}
+                            be_mcidlist.append(temp)
+                            be_mcidlist.remove(temp2)
+                            with open('be_mcidlist.json','w') as f:
+                                json.dump(be_mcidlist,f,ensure_ascii=False, indent=4)
+                            userid = (int(inter.author.id))
+                            try:
+                                editmcid3 = session.query(mcid_date).filter(mcid_date.discordid == userid).first()
+                                editmcid3.be_mcid = addgamertag
+                                session.commit()
+                            except:
+                                emd = discord.Embed(title="エラーが発生しました。",description="マイクラの参加リストにあなたは登録されましたが、データベースの保存時にエラーが発生しました。申し訳ございませんが、<@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
+                                await ctx.edit_original_message(embed=emd)
+                                return
+                            session.close
+                            emd = discord.Embed(title="ユーザー情報を上書き保存しました。",description="登録情報" + "\n" + f"ゲーマータグ: {self.gametag}",color=discord.Color.purple())
+                            await ctx.edit_original_message(content=None,embed=emd)                
+                        return
+                v = discord.ui.View()
+                b = seve_button(gametag=gamertag)
+                b2 = noseve_button()
+                v.add_item(b)
+                v.add_item(b2)
+                emd = discord.Embed(title="あなたは既に登録されています。",description=f" 現在の登録情報 \n MCID: {date.be_mcid} \n 上書き保存しますか?",color=discord.Color.red())
+                await inter.send(embed=emd,view=v)
+                await v.wait()
+                if b.value is None:
+                    b.disabled = True
+                    b2.disabled = True
+                    await inter.edit_original_message(view=v)
                     return
-            @on_click.matching_id("no")
-            async def on_no(inter):
-                await msg.edit(content="変更せずに終了しました。",embed=None,components=[])
-                mcidtemp.pop(inter.author.id)
-                return
-            @on_click.timeout
-            async def on_timeout():
-                if inter.author.id in flag.keys():
-                    flag.pop(inter.author.id)
-                else:
-                    await msg.edit(content="変更せずに終了しました。",embed=None,components=[])
-                if inter.author.id in mcidtemp.keys():
-                    mcidtemp.pop(inter.author.id)
-                else:
-                    pass
-                return
-            if flag2 == True:
-                pass
-            else:
-                session.close
-                return
-        else:
-            pass
+
     be_mcidlists = open('be_mcidlist.json','r')
     be_mcidlist = json.load(be_mcidlists)
     addgamertag = (str("." + gamertag))
     check = json.dumps(be_mcidlist)
     if gamertag in check:
-        await inter.edit("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
+        await inter.send("既に別の人が登録していますけど、、、、同じ人が2人以上いるんですか・・・?")
         return
     else:
-        emd2 = discord.Embed(title="ファイルに保存処理中 <a:road:969468636068732968>",color=discord.Color.blue())
-        await inter.edit(content="",embed=emd2)
         temp = {"name":addgamertag}
         be_mcidlist.append(temp)
         with open('be_mcidlist.json','w') as f:
@@ -456,49 +471,78 @@ async def be_mcid_add(inter,gamertag=None):
                 session.commit()
         except:
             emd = discord.Embed(title="エラーが発生しました。",description="マイクラの参加リストにあなたは登録されましたが、データベースの保存時にエラーが発生しました。申し訳ございませんが、<@400604650233135115> に伝えてください。(伝えないと、後々めんどうなことになるかもしれません。)",color=discord.Color.red())
-            await inter.edit(embed=emd)
+            await inter.send(embed=emd)
             return
         session.close
         emd = discord.Embed(title="ユーザー登録が完了しました。",description="登録情報" + "\n" + f"ゲーマータグ: {gamertag}",color=discord.Color.purple())
-        await inter.edit(embed=emd)
+        await inter.send(embed=emd)
 #GBANシステム
 @interclient.slash_command(
     name = "gban",
     description = 'かきくけこサーバーのグローバルBANシステムに違反者を登録します。(現状はよぴるのみ実行可能)',
-    options = [Option('id',"ユーザーIDを書いて下さい。",OptionType.STRING,required=True),Option('cause',"理由を書いて下さい。",OptionType.STRING,required=True)],
+    options = [Option('id',"ユーザーIDを書いて下さい。",required=True),Option('cause',"理由を書いて下さい。",required=True)],
 )
-async def gban(inter,id=None,cause=None):
+async def gban(inter:ApplicationCommandInteraction,id=None,cause=None):
     if inter.author.id == 400604650233135115:
+        await inter.response.defer(ephemeral=True)
+        class noseve_button(discord.ui.Button):
+            def __init__(self):
+                super().__init__()
+                self.value = None
+                self.label = "キャンセル"
+                self.style = discord.ButtonStyle.green
+            async def callback(self,ctx:ApplicationCommandInteraction):
+                b.disabled = True
+                b2.disabled = True
+                await inter.edit_original_message(view=v)
+                await ctx.send("GBAN登録を取り消しました。")
+                return
+        class seve_button(discord.ui.Button):
+            def __init__(self):
+                super().__init__()
+                self.value = None
+                self.label = "登録"
+                self.style = discord.ButtonStyle.green
+            async def callback(self,ctx:ApplicationCommandInteraction):
+                b.disabled = True
+                b2.disabled = True
+                await inter.edit_original_message(view=v)
+                await ctx.send("データベース読み込み中 <a:road:969468636068732968>",ephemeral=True)
+                banid = (int(gbantemp[inter.author.id]))
+                cause = gbantemp2[inter.author.id]
+                dates = session.query(gban_system).all()
+                flag3 = False
+                for date in dates:
+                    if date.userid == banid:
+                        await ctx.edit_original_message("既に登録されています、なので登録できません。")
+                        flag3 = True
+                        return
+                if flag3 == False:
+                    await ctx.edit_original_message("データベースに保存処理中 <a:road:969468636068732968>")
+                    add = gban_system(userid=banid,cause=cause)
+                    try:
+                        session.add(add)
+                        session.commit()
+                        await ctx.edit_original_message("かきくけこグローバルBANシステムに違反者を追加しました。")
+                    except:
+                        await ctx.edit_original_message("データベースの保存処理中に、エラーが発生しました。")
+                else:
+                    pass
         emd = discord.Embed(title=('本当に登録しますか?'),description=f'選択情報 \n 名前: <@{id}> \n ユーザーID: {id} \n 理由: {cause}',color=discord.Color.blue())
-        row = ActionRow(Button(style=ButtonStyle.green,label="登録",custom_id="add"))
-        msg = await inter.reply(embed=emd,ephemeral=True,components=[row])
-        on_click = msg.create_click_listener(timeout=10)
         gbantemp[inter.author.id] = id
         gbantemp2[inter.author.id] = cause
-        @on_click.matching_id("add")
-        async def on_add(inter):
-            await inter.reply("データベース読み込み中 <a:road:969468636068732968>",ephemeral=True)
-            banid = (int(gbantemp[inter.author.id]))
-            cause = gbantemp2[inter.author.id]
-            dates = session.query(gban_system).all()
-            flag3 = False
-            for date in dates:
-                if date.userid == banid:
-                    await inter.edit("既に登録されています、なので登録できません。")
-                    flag3 = True
-                    return
-                                                                                    
-            if flag3 == False:
-                await inter.edit("データベースに保存処理中 <a:road:969468636068732968>")
-                add = gban_system(userid=banid,cause=cause)
-                try:
-                    session.add(add)
-                    session.commit()
-                    await inter.edit("かきくけこグローバルBANシステムに違反者を追加しました。")
-                except:
-                    await inter.edit("データベースの保存処理中に、エラーが発生しました。")
-            else:
-                pass
+        v = discord.ui.View()
+        b = seve_button()
+        b2 = noseve_button()
+        v.add_item(b)
+        v.add_item(b2)
+        await inter.send(embed=emd,view=v)
+        await v.wait()
+        if b.value is None:
+            b.disabled = True
+            b2.disabled = True
+            await inter.edit_original_message(view=v)
+            return
     else:
         await inter.reply("よぴる以外実行できましぇーん＾＾",ephemeral=True)
 #サーバー入室時にする処理
